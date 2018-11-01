@@ -249,7 +249,7 @@ a:focus {
 */
 
 #title {
-    padding: 0;
+    /*padding: 0;*/
 }
 
 #title .try {
@@ -286,10 +286,6 @@ a:focus {
     Let's move to 'big thoughts' with centered text and custom font sizes.
 */
 #big {
-    width: 600px;
-    text-align: center;
-    font-size: 60px;
-    line-height: 1;
 }
 
 #big strong,
@@ -308,14 +304,12 @@ a:focus {
     'Tiny ideas' just need some tiny styling.
 */
 #tiny {
-    width: 500px;
-    text-align: center;
 }
 
 /*
     This step has some animated text ...
 */
-#ing { width: 500px }
+#ing {  }
 
 /*
     ... so we define display to `inline-block` to enable transforms and
@@ -381,7 +375,6 @@ a:focus {
 */
 
 #imagination {
-    width: 600px;
 }
 
 #imagination .imagination {
