@@ -31,7 +31,7 @@
 
 <div id="impress">
 
-    <div id="bored" class="step slide markdown markdown-title" data-x="-1000" data-y="-1500">
+    <div id="bored" class="step slide markdown" data-x="-1000" data-y="-1500">
 # 一个基于属性匹配的函数式对象映射系统的设计
 ## by 水山清风
     </div>
@@ -47,17 +47,23 @@
     <div class="step slide markdown" data-x="1000" data-y="-1500">
 ## 课题一
 - 改进 circe
+##
 
-        case class User(id: Option[Int], first: String, last: String)
-        val userJson = io.circe.parser.parse("{ \"id\": 123, \"first\": \"firstName\", \"last\": \"lastName\" }")
-        userJson.as[User]
+    case class User(id: Option[Int], first: String, last: String)
+    val userJson = io.circe.parser.parse("{ \"id\": 123, \"first\": \"firstName\", \"last\": \"lastName\" }")
+    userJson.as[User]
+
+##
 
 - 问题1
 - 不能处理特例,遇到
+##
 
-        { "id": "123", "first": "firstName", "last": "lastName" }
+    { "id": "123", "first": "firstName", "last": "lastName" }
 
-只能手写 Decoder,不能智能识别
+##
+
+- 只能手写 Decoder,不能智能识别
     </div>
 
     <div id="title" class="step slide markdown" data-x="0" data-y="0" data-scale="1">
@@ -82,7 +88,7 @@
 - 问题2
 - 编译速度缓慢
 - 原因: 无法并发获取 HList 的隐式转换
-- ciece 解决方案: 重写 shapeless 部分功能
+- circe 解决方案: 重写 shapeless 部分功能
 - 缺点: 难度大,没有可以适配其他库的通用 api
 - 问题3
 - 无法调试或调试困难,发生编译错误时难以定位出现问题的属性
@@ -91,16 +97,17 @@
     <div id="big" class="step slide markdown" data-x="3500" data-y="2100" data-rotate="180" data-scale="1">
 ## 课题二
 - 改进 slick
+##
 
-        case class User(id: Option[Int], first: String, last: String)
+    case class User(id: Option[Int], first: String, last: String)
 
-        class Users(tag: Tag) extends Table[User](tag, "users") {
-            def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
-            def first = column[String]("first")
-            def last = column[String]("last")
-            def * = (id.?, first, last) <> (User.tupled, User.unapply)
-        }
-        val users = TableQuery[Users]
+    class Users(tag: Tag) extends Table[User](tag, "users") {
+        def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
+        def first = column[String]("first")
+        def last = column[String]("last")
+        def * = (id.?, first, last) <> (User.tupled, User.unapply)
+    }
+    val users = TableQuery[Users]
     </div>
 
     <div id="tiny" class="step slide markdown" data-x="2825" data-y="2325" data-z="-3000" data-rotate="300" data-scale="1">
@@ -109,7 +116,7 @@
 - 问题2
 - 超过 22 字段的大表将会把问题 1 放大数倍,造成维护困难
 - 问题3
-- shapeless 公共问题,编译缓慢,超过 100 字段的表编译一次需要 20s+
+- 与 circe 相同,编译速度缓慢,超过 100 字段的表编译一次需要 20s+
 - 问题4
 - 与 circe 相反,slick 处处特例,无法省略没有特殊需求的列声明
 - 问题5
@@ -171,7 +178,7 @@
 1. 解决方法:见下文
     </div>
 
-    <div id="page-01" class="step slide markdown" data-x="9100" data-y="4600" data-z="40" data-rotate-x="80" data-rotate-y="10" data-scale="1">
+    <div id="page-01" class="step slide markdown" data-x="9300" data-y="4600" data-z="40" data-rotate-x="80" data-rotate-y="10" data-scale="1">
 - 难点:
 1. 1.不能存在性能问题
 1. 解决方法1:不使用任何运行时反射(Macro, Implicit)
@@ -184,7 +191,7 @@
 
     <div id="page-02" class="step slide markdown" data-x="200" data-y="1900" data-z="24" data-rotate-x="14" data-rotate-y="78" data-scale="1">
 # 接下来一小时,让我们开始艰难的系统设计
-### [项目源码地址](https://github.com/scalax/asuna)
+### 项目源码地址: [scalax/asuna](https://github.com/scalax/asuna)
     </div>
 
     <div id="page-03" class="step slide markdown" data-x="100" data-y="1000" data-z="0" data-rotate-x="-30" data-rotate-y="-17" data-scale="1">
@@ -193,15 +200,54 @@
 
     case class Foo(name: String, id: Int, age: Int)
     case class Bar(id: Int, name: String, age: Int)
+    val convert: Foo => Bar = ???
     </div>
 
     <div id="page-04" class="step slide markdown" data-x="-600" data-y="1800" data-z="4" data-rotate-x="-20" data-rotate-y="-17" data-scale="1">
-### 比较: 按顺序匹配 vs 按名称匹配
-- 按顺序匹配: shapeless
-- 缺点: 1.难以赋予 HList 的 index 实际意义,必须保持严格的先后循序关系
+### 属性匹配规则:按顺序匹配 vs 按名称匹配
+- 按顺序匹配:
+- 现有支持: shapeless
+- 优点: 1.支持完善
+- 缺点: 1.难以赋予 HList 的 index 实际意义,必须保持严格的先后顺序对应关系
 - 2.数据结构修改后难以维护
 - 3.HList 提升编译速度的难度较大
 - 4.不能处理数据源不一定是 case class 的情况
+    </div>
+
+    <div id="page-05" class="step slide markdown" data-x="-800" data-y="600" data-z="1" data-rotate-x="80" data-rotate-y="260" data-scale="1">
+### 属性匹配规则:按顺序匹配 vs 按名称匹配
+- 按名称匹配:
+- 现有支持: 无或只有简单的 case class copy 支持([kailuowang/henkan](https://github.com/kailuowang/henkan))
+- 优点: 1.实现比较自由,可以实现更多自定义映射规则
+- 2.匹配规则比较直观,容易在对象间互相查找对应的属性
+- 3.不需要关心顺序,在定义时和维护时更友好
+- 4.调优空间大
+- 缺点: 1.宏的实现十分复杂
+- 2.目前的宏将会被 scala 抛弃(有新的替代)
+    </div>
+
+    <div id="page-06" class="step slide markdown" data-x="-1000" data-y="-600" data-z="1" data-rotate-x="-20" data-rotate-y="40" data-scale="0.8">
+# 结论: 按属性名称匹配
+    </div>
+
+    <div id="page-07" class="step slide markdown" data-x="0" data-y="-600" data-z="200" data-rotate-x="12" data-rotate-y="20" data-scale="1">
+## DTO 实现结果
+
+    case class Foo(name: String, id: Int, age: Int)
+    case class Bar(id: Int, name: String, age: Int)
+
+    val convert: Foo => Bar = { fooModel: Foo =>
+        dto.effect(dto.singleModel[Bar](fooModel).compile).value
+    }
+
+    val foo = Foo("name", 1234, 6789)
+
+    println(foo) //Foo(name,1234,6789)
+    println(convert(foo)) //Bar(1234,name,6789)
+
+- 特点: 1.按名称匹配
+- 2.类型安全
+- 3.没有运行时反射,保证性能
     </div>
 
     <div id="overview" class="step" data-x="3000" data-y="1500" data-z="0" data-scale="10">
@@ -220,7 +266,7 @@ if ("ontouchstart" in document.documentElement) {
 <!-- Extra modules
      Load highlight.js, mermaid.js and markdown.js from extras.
      See also src/plugins/extras/extras.js -->
-<script type="text/javascript" src="./jquery-3.3.1.min.js"></script>
+<script type="text/javascript" src="./impress.css/jquery-3.3.1.min.js"></script>
 <script type="text/javascript" src="./impress.js/extras/highlight/highlight.pack.js"></script>
 <script type="text/javascript" src="./impress.js/extras/mermaid/mermaid.min.js"></script>
 <script type="text/javascript" src="./impress.js/extras/markdown/markdown.js"></script>
