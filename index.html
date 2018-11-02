@@ -149,30 +149,59 @@
 
     <div id="one-more-thing" class="step slide markdown" data-x="6000" data-y="4000" data-scale="2">
 - 我们需要一个对象到对象的自动映射系统
-- 难点:
+- 目标:
 1. 1.匹配规则必须直观
-1. 解决方法:基于属性名称匹配
-1. 2.不能存在性能问题
-1. 解决方法1:不使用任何运行时反射(Macro, Implicit)
-1. 解决方法2:不限定任何特定中间数据格式
-1. 3.足够通用,可以面对几乎所有特有的或普遍的类型系统
-1. 解决方法:不能使用 Monad,自建抽象
+1. 做法:基于属性名称匹配
+1. 2.足够通用,可以面对几乎所有特有的或普遍的类型系统
+1. 做法:不使用 Monad,自建抽象
 1. 较普遍的类型系统: circe, play-json
 1. 特有的类型系统: slick, shapeless 相关, tuple 相关
 1. 反例:无法处理的类型系统: quill,原因:深度 Macro 相关
+1. 3.动态映射和静态映射可以同时存在
+1. 既能映射静态的普通类型对象属性,也能映射动态的集合属性(List, Map, JsonObject)
     </div>
 
     <div id="its-in-3d" class="step slide markdown" data-x="8200" data-y="4300" data-z="-100" data-rotate-x="-40" data-rotate-y="10" data-scale="2">
-- 难点:
+- 目标:
 1. 4.类型系统可推导性强
-1. 解决方法:类型驱动的设计
-1. 5.任何时候都可以自动匹配,不能因为各种情况回退到原始 api
+1. 做法:类型驱动
+1. 5.较快的编译速度
 1. 解决方法:见下文
-1. 6.较快的编译速度
+1. 6.可调试,可定位的编译期错误
 1. 解决方法:见下文
-1. 7.可调试,可定位的编译期错误
-1. 解决方法:见下文
-1. 8.维护性良好的 Macro 模块
+    </div>
+
+    <div id="page-01" class="step slide markdown" data-x="9100" data-y="4600" data-z="40" data-rotate-x="80" data-rotate-y="10" data-scale="1">
+- 难点:
+1. 1.不能存在性能问题
+1. 解决方法1:不使用任何运行时反射(Macro, Implicit)
+1. 解决方法2:不限定任何特定中间数据格式
+1. 2.任何时候不可以回退到非自动映射
+1. 3.Macro 模块代码要易于维护和理解
+1. 4.万一 Macro 模块失效,需要提供一定的回退措施
+1. 5.不能有 22 限制
+    </div>
+
+    <div id="page-02" class="step slide markdown" data-x="200" data-y="1900" data-z="24" data-rotate-x="14" data-rotate-y="78" data-scale="1">
+# 接下来一小时,让我们开始艰难的系统设计
+### [项目源码地址](https://github.com/scalax/asuna)
+    </div>
+
+    <div id="page-03" class="step slide markdown" data-x="100" data-y="1000" data-z="0" data-rotate-x="-30" data-rotate-y="-17" data-scale="1">
+# 最简单的对象映射情况
+## java 模式的 DTO(Data Transfer Object)
+
+    case class Foo(name: String, id: Int, age: Int)
+    case class Bar(id: Int, name: String, age: Int)
+    </div>
+
+    <div id="page-04" class="step slide markdown" data-x="-600" data-y="1800" data-z="4" data-rotate-x="-20" data-rotate-y="-17" data-scale="1">
+### 比较: 按顺序匹配 vs 按名称匹配
+- 按顺序匹配: shapeless
+- 缺点: 1.难以赋予 HList 的 index 实际意义,必须保持严格的先后循序关系
+- 2.数据结构修改后难以维护
+- 3.HList 提升编译速度的难度较大
+- 4.不能处理数据源不一定是 case class 的情况
     </div>
 
     <div id="overview" class="step" data-x="3000" data-y="1500" data-z="0" data-scale="10">
@@ -201,10 +230,13 @@ if ("ontouchstart" in document.documentElement) {
 $(function() {
     impress().init();
 
-    $($("code")[0]).addClass("scala");
-    $($("code")[1]).addClass("json");
-    $($("code")[2]).addClass("scala");
-    $($("code")[3]).addClass("scala");
+    $.map($("code"), function(item, index) {
+        if (index === 1) {
+            $(item).addClass("json");
+        } else {
+            $(item).addClass("scala");
+        }
+    });
 
     $('pre code').each(function(i, block) {
         hljs.highlightBlock(block);
