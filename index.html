@@ -123,7 +123,7 @@
 - 与 circe 的问题相同,无法调试或调试困难.发生编译错误时难以定位出现问题的属性
     </div>
 
-    <div id="ing" class="step slide markdown" data-x="3500" data-y="-850" data-z="0" data-rotate="270" data-scale="2">
+    <div id="ing" class="step slide markdown" data-x="3500" data-y="-850" data-z="0" data-rotate="270" data-scale="2.6">
 ## 期望代码一
 
     case class User(id: Option[Int], first: String, last: String)
@@ -249,6 +249,90 @@
 - 2.类型安全
 - 3.没有运行时反射,保证性能
     </div>
+
+    <div id="page-08" class="step slide markdown" data-x="1000" data-y="-600" data-z="-4000" data-rotate-x="-40" data-rotate-y="-40" data-scale="2">
+### [示例代码](https://github.com/djx314/djx314.github.io/tree/master/lesson01/src/main/scala)
+### 运行命令: sbt test01
+    </div>
+
+    <div id="page-10" class="step slide markdown" data-x="1000" data-y="100" data-z="-2000" data-rotate-x="82" data-rotate-y="17" data-scale="1">
+## 然而,事情总不会那么美好
+- scala 风格的 DTO
+##
+
+    case class Foo(name: Future[String], id: Either[Exception, Int], age: Future[Either[Exception, Int]])
+    case class Bar(id: Int, name: String, age: Int)
+    val convert: Foo => Bar = ???
+
+##
+
+- 或者
+##
+
+    object Foo {
+        val name = Future.successful("name")
+        val id = Right(1234)
+        val age = Future.successful(Right(6789))
+    }
+    case class Bar(id: Int, name: String, age: Int)
+    val newModel: Bar = ???
+    </div>
+
+    <div id="page-11" class="step slide markdown" data-x="1000" data-y="800" data-z="-600" data-rotate-x="12" data-rotate-y="17" data-scale="1">
+## 新的实现
+- [示例代码](https://github.com/djx314/djx314.github.io/tree/master/lesson02/src/main/scala)
+- 运行命令: sbt test02
+##
+
+    val ec = scala.concurrent.ExecutionContext.Implicits.global
+
+    val newModel: Future[Either[Exception, Bar]] =
+    fe.effect(fe.singleModel[Bar](Foo).compile).data(ec)
+
+    println(Await.result(newModel, Duration.Inf)) //Right(Bar(1234,name,6789))
+
+##
+
+- 小技巧: 无须直接引入 ExecutionContext,作为参数在最后传入即可,减少 implicit not found 时的不确定因素
+- 开始讲解概念 DecoderShape
+    </div>
+
+    <div id="page-12" class="step slide markdown" data-x="1470" data-y="1900" data-z="-600" data-rotate-x="12" data-rotate-y="17" data-scale="1.6">
+    case class SplitData[T, R](current: T, left: R)
+
+    trait DecoderShape[-E, RepCol, DataCol] extends CommonShape[E, RepCol] {
+        override type Target
+        type Data
+        override def wrapRep(base: => E): Target
+        override def buildRep(base: Target, oldRep: RepCol): RepCol
+        def takeData(rep: Target, oldData: DataCol): SplitData[Data, DataCol]
+    }
+
+##
+
+- RepCol 列的临时容器,例如 List[Decoder[_]]
+- DataCol 数据的临时容器,例如 List[Any], (Any, Any)
+- buildRep 叠加列
+- takeData 取出根据协议由 RepCol 生成 DataCol 后的数据
+- 重点:由 Any 类型到特定类型
+    </div>
+
+    <div id="page-13" class="step slide markdown" data-x="3170" data-y="1000" data-z="-600" data-rotate-x="12" data-rotate-y="17" data-scale="1.6">
+    trait EncoderShape[-E, RepCol, DataCol] extends CommonShape[E, RepCol] {
+        override type Target
+        type Data
+        override def wrapRep(base: => E): Target
+        override def buildRep(base: Target, oldRep: RepCol): RepCol
+        def buildData(data: Data, rep: Target, oldData: DataCol): DataCol
+    }
+
+- RepCol 列的临时容器,例如 List[Decoder[_]]
+- DataCol 数据的临时容器,例如 List[Any], (Any, Any)
+- buildRep 叠加列
+- buildData 由特定类型数据转化为 DataCol,再根据协议与 RepCol 发生作用
+- 重点:由特定类型到 Any 类型
+    </div>
+
 
     <div id="overview" class="step" data-x="3000" data-y="1500" data-z="0" data-scale="10">
     </div>
