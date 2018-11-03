@@ -426,11 +426,57 @@
     </div>
 
     <div id="page-22" class="step slide markdown" data-x="2000" data-y="3100" data-z="14" data-rotate-x="14" data-rotate-y="171" data-scale="1">
-- 我们不仅仅需要把属性对应起来
+### 我们不仅仅需要把属性对应起来
 - 我们需要省略无用的声明
 - 我们需要 LabelGeneric
-- 我们需要在任何时候都可以使用自动映射
-- 任何时候不能导致数量级的声明代码增长
+- 我们需要在任何时候都不回退到原始 api
+- 任何时候不能带来数量级的属性声明增长
+- 高阶类型带来的问题尚未完全解决
+### 通过 slick 的例子阐述大部分问题
+    </div>
+
+    <div id="page-23" class="step slide markdown" data-x="2000" data-y="-1200" data-z="-40" data-rotate-x="14" data-rotate-y="171" data-rotate="270" data-scale="1">
+## slick + asuna 概述
+- 项目地址: [scalax/shino](https://github.com/scalax/shino)
+- 普通自动映射 [reader](https://github.com/scalax/shino/blob/master/README_reader.md) [writer](https://github.com/scalax/shino/blob/master/README_writer.md) [formatter](https://github.com/scalax/shino/blob/master/README_formatter.md)
+- 动态 sortby 映射
+- 动态取列
+    </div>
+
+    <div id="page-24" class="step slide markdown" data-x="5200" data-y="-1200" data-z="2" data-rotate-x="14" data-rotate-y="171" data-rotate="240" data-scale="1">
+## 处理属性重写
+- 1.定义时重写
+##
+
+    class FriendTable(tag: slick.lifted.Tag) extends Table[Friend](tag, "firend") with SlickResultIO {
+        def id   = column[Long]("id", O.AutoInc)
+        //...
+        @OverrideProperty("id")
+        def id_? = id.?
+
+        override def * = shino.effect(shino.singleModel[Friend](this).compile).shape
+    }
+
+- `id_?` 可以是其他无关的属性名称
+    </div>
+
+    <div id="page-25" class="step slide markdown" data-x="6400" data-y="-1200" data-z="2" data-rotate-x="14" data-rotate-y="140" data-rotate="220" data-scale="1">
+- 2.对原对象低侵入的重写
+##
+
+    class FriendTable(tag: slick.lifted.Tag) extends Table[Friend](tag, "firend") with SlickResultIO {
+    self =>
+        def id   = column[Long]("id", O.AutoInc)
+        def name = column[String]("name")
+        def nick = column[String]("nick")
+        def age  = column[Int]("age")
+        override def * = shino.effect(shino.singleModel[Friend](new FriendTableExt { override val ft = self }: FriendTableExt).compile).shape
+    }
+
+    trait FriendTableExt {
+        @RootTable val ft: FriendTable
+        def id = ft.id.?
+    }
     </div>
 
     <div id="overview" class="step" data-x="3000" data-y="1500" data-z="0" data-scale="10">
