@@ -460,7 +460,7 @@
 - `id_?` 可以是其他无关的属性名称
     </div>
 
-    <div id="page-25" class="step slide markdown" data-x="6400" data-y="-1200" data-z="2" data-rotate-x="14" data-rotate-y="140" data-rotate="220" data-scale="1">
+    <div id="page-25" class="step slide markdown" data-x="6400" data-y="-1200" data-z="2" data-rotate-x="14" data-rotate-y="140" data-scale="1">
 - 2.对原对象低侵入的重写
 ##
 
@@ -477,9 +477,174 @@
         @RootTable val ft: FriendTable
         def id = ft.id.?
     }
+
+- RootTable 会把所注解的属性(ft)的所有子属性提高到上一级(FriendTableExt),但优先级较低
     </div>
 
-    <div id="overview" class="step" data-x="3000" data-y="1500" data-z="0" data-scale="10">
+    <div id="page-26" class="step slide markdown" data-x="7800" data-y="-1200" data-z="2" data-rotate-x="14" data-rotate-y="140" data-scale="1">
+## 处理数据类型转换
+
+    case class Friend(id: Long, name: String, nick: String, age: Int)
+
+    class FriendTable(tag: slick.lifted.Tag) extends Table[Friend](tag, "firend") with SlickResultIO {
+        def id   = column[Long]("id", O.AutoInc)
+        def name = shino.shaped(column[String]("name")).fmap(s => "user name:" + s)(t => t)
+        def nick = column[String]("nick")
+        def age  = column[Int]("age")
+
+        override def * = shino.effect(shino.singleModel[Friend](this).compile).shape
+    }
+
+    val friendTq = TableQuery[FriendTable]
+
+- EncoderShapeValue.emap, DecoderShapeValue.dmap, FormatterShapeValue.fmap
+    </div>
+
+    <div id="page-27" class="step slide markdown" data-x="8000" data-y="0" data-z="7" data-rotate-x="14" data-rotate-y="140" data-scale="1">
+## 高级功能
+- RootModel 注解
+- RepColumnContent(对应 shapeless LabelGeneric)
+- RepGroup(类似 Mixin)
+- PlaceHolder
+- LazyModel
+- UnusedModel
+    </div>
+
+    <div id="page-28" class="step slide markdown" data-x="-2000" data-y="0" data-z="7" data-rotate-x="14" data-rotate-y="140" data-scale="1">
+## RootModel
+
+    case class IdAndName(id: Int, name: String)
+    def validateIdAndName = Future.successful(Right(IdAndName(1234, "name")))
+
+    object Foo {
+        @RootModel[IdAndName]
+        val idAndName = validateIdAndName
+        val age       = Future.successful(Right(6789))
+    }
+    case class Bar(id: Int, name: String, age: Int)
+
+    val newModel = fe.effect(fe.singleModel[Bar](Foo).compile).data(ec)
+    println(Await.result(newModel, Duration.Inf))
+
+- [代码链接](https://github.com/djx314/djx314.github.io/tree/master/lesson03/src/main/scala), 运行命令: `sbt test03`
+    </div>
+
+    <div id="page-29" class="step slide markdown" data-x="-2000" data-y="-900" data-z="7" data-rotate-x="14" data-rotate-y="100" data-scale="1">
+## RootModel
+- 应用场景: 多列混合验证
+- play-json 需要根据 id 和 name 验证账号是否重复返回一个带 Future 的复合 case class
+- 作用: 防止重复求值,支持多列混合运算
+    </div>
+
+    <div id="page-30" class="step slide markdown" data-x="-2000" data-y="-1800" data-z="7" data-rotate-x="14" data-rotate-y="50" data-scale="1">
+## RepColumnContent & PlaceHolder
+- 所有的 case class Mapper 都内置 RepColumnContent 以支持 LabelGeneric
+- 所有需要被映射的列如果在 table 中没有对应都会以 PlaceHolder[DataType] 填充
+
+## slick auto mapper(目标二)
+- [shino 对应文档(最后一个 Case)](https://github.com/scalax/shino/blob/master/README_formatter.md)
+    </div>
+
+    <div id="page-31" class="step slide markdown" data-x="-2000" data-y="-2600" data-z="7" data-rotate-x="7" data-rotate-y="20" data-scale="1">
+## circe encoder(目标一)
+- 实现两个 implicit
+
+##
+
+    implicit def feImplicit1[T](implicit encoder: Encoder[T]):
+        EncoderShape.Aux[
+            RepColumnContent[Placeholder[T], T]
+            , T
+            , EncoderWrapperImpl[T]
+            , List[EncoderWrapper]
+            , List[(String, Json)]
+        ]
+
+    </div>
+
+    <div id="page-32" class="step slide markdown" data-x="-800" data-y="-2600" data-z="7" data-rotate-x="0" data-rotate-y="0" data-scale="1">
+        implicit def feImplicit2[T]: EncoderShape.Aux[
+            RepColumnContent[Encoder[T], T]
+            , T
+            , EncoderWrapperImpl[T]
+            , List[EncoderWrapper]
+            , List[(String, Json)]
+        ]
+
+- 不需要 RepColumnContent 时显式声明 RepColumnContent 可以减少类型判定的歧义,但不能使用该 implicit 对列进行 context.shaped 操作
+    </div>
+
+    <div id="page-33" class="step slide markdown" data-x="200" data-y="-2600" data-z="7" data-rotate-x="0" data-rotate-y="0" data-scale="1">
+- 没有特例的情况
+- [下面两个例子代码链接](https://github.com/djx314/djx314.github.io/tree/master/lesson04/src/main/scala), 运行命令 `sbt test04`
+##
+
+    case class Bar(id: Int, name: String, age: Int)
+    object Foo {}
+
+    val bar1  = Bar(478848, "name", 8237)
+    val json1 = circe.effect(circe.singleModel[Bar](Foo).compile).toJson(bar1)
+    val json2 = Json.fromJsonObject(json1)
+    println(json2.noSpaces) //{"age":8237,"name":"name","id":478848}
+
+    val json3 = bar1.asJson
+    println(json2 == json3) //true
+    </div>
+
+    <div id="page-34" class="step slide markdown" data-x="1200" data-y="-2600" data-z="7" data-rotate-x="0" data-rotate-y="0" data-scale="1">
+- 某一列需要特殊 Encoder
+##
+
+    case class Bar(id: Int, name: String, age: Int)
+    case class CompareBar(id: String, name: String, age: Int)
+
+    object Foo2 {
+        val id = Encoder.encodeInt.contramap { str: String => str.toInt }
+    }
+
+    val bar1  = Bar(478848, "name", 8237)
+    val bar2 = CompareBar("478848", "name", 8237)
+
+    val json3 = bar1.asJson
+    val json4 = circe.effect(circe.singleModel[CompareBar](Foo2).compile).toJson(bar2)
+    val json5 = Json.fromJsonObject(json4)
+    println(json5.noSpaces) //{"age":8237,"name":"name","id":478848}
+    println(json5 == json3) //true
+
+- 亦可容易实现特殊的列名转换需求
+    </div>
+
+    <div id="page-35" class="step slide markdown" data-x="2400" data-y="-2600" data-z="7" data-rotate-x="0" data-rotate-y="20" data-scale="1">
+## RepGroup(简要介绍)
+- slick 的 table 需要 encode/decode 到不同的 context(input, output, sort by, filter)
+- 某些列在某个 context 有特殊需求
+- 可以用 context.shaped lift 有特殊需求的列,使用 mixin 进行混入操作
+- 由于查找规则十分特殊,也要和 RepColumnContent 兼容,内部实现十分诡异 :P
+    </div>
+
+    <div id="page-36" class="step slide markdown" data-x="3600" data-y="-2600" data-z="7" data-rotate-x="0" data-rotate-y="40" data-scale="1">
+- 示意代码
+##
+
+    class FriendTable(tag: slick.lifted.Tag) extends Table[Friend](tag, "firend") with SlickResultIO {
+        def id   = column[Long]("id", O.AutoInc)
+        def name = shino.shaped(column[String]("name")).fmap(s => "user name:" + s)(t => t).mixin(sortby.shaped(SortByContent("nameKey", column[String]("name"))))
+        def nick = column[String]("nick")
+        def age  = column[Int]("age")
+
+        override def * = shino.effect(shino.singleModel[Friend](this).compile).shape
+        val sortBy = sortby.effect(sortby.singleModel[Friend](this).compile).shape
+    }
+    </div>
+
+    <div id="page-37" class="step slide markdown" data-x="4700" data-y="-2600" data-z="7" data-rotate-x="-7" data-rotate-y="60" data-scale="1">
+## LazyModel & UnusedModel
+![快完了快完了](./impress.css/pic-01.jpg)
+
+- 快完了快完了,最重要的概念放最后了
+    </div>
+
+    <div id="overview" class="step" data-x="3000" data-y="1500" data-z="0" data-scale="16">
     </div>
 
 </div>

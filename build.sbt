@@ -1,9 +1,15 @@
 lazy val lesson00 = project in (file("./lesson00"))
 lazy val lesson01 = (project in (file("./lesson01"))).dependsOn(lesson00)
 lazy val lesson02 = (project in (file("./lesson02"))).dependsOn(lesson00)
+lazy val lesson03 = (project in (file("./lesson03"))).dependsOn(lesson00)
+lazy val lesson04 = (project in (file("./lesson04"))).dependsOn(lesson00)
 
 dependsOn(lesson01)
 dependsOn(lesson02)
+dependsOn(lesson03)
+dependsOn(lesson04)
 
 addCommandAlias("test01", ";lesson01/clean;lesson01/run")
 addCommandAlias("test02", ";lesson02/clean;lesson02/run")
+addCommandAlias("test03", ";lesson03/clean;lesson03/run")
+addCommandAlias("test04", ";lesson04/clean;lesson04/run")
