@@ -352,6 +352,87 @@
 - DataCol 不统一, RepCol 统一
     </div>
 
+    <div id="page-15" class="step slide markdown" data-x="-600" data-y="4200" data-z="200" data-rotate-x="11" data-rotate-y="4" data-scale="1">
+## ShapeValue 介绍
+
+    trait DecoderShapeValue[U, RepCol, DataCol] extends CommonShapeValue[U, RepCol] {
+        override type RepType
+        override val rep: RepType
+        override val shape: DecoderShape.Aux[RepType, U, RepType, RepCol, DataCol]
+    }
+
+- 带 rep 的 DecoderShapeValue, 自动提供 DecoderShape.
+- 同理 EncoderShapeValue, FormatterShapeValue
+    </div>
+
+    <div id="page-16" class="step slide markdown" data-x="600" data-y="4200" data-z="200" data-rotate-x="-124" data-rotate-y="71" data-scale="1">
+## 一般映射流程
+
+    context.effect(context.singleModel[CaseClass](table).compile)
+    </div>
+
+    <div id="page-17" class="step slide markdown" data-x="1200" data-y="4200" data-z="-800" data-rotate-x="211" data-rotate-y="1" data-scale="1">
+## singleModel 实现的 3 个版本
+- 1.只使用 Macro
+- 难度大
+- 代码难以维护
+- 扩展性差
+- 难以推导
+- 无法处理 `shapeless.Lazy` 的情况
+    </div>
+
+    <div id="page-18" class="step slide markdown" data-x="2400" data-y="4200" data-z="-800" data-rotate-x="-60" data-rotate-y="14" data-scale="1">
+- 2.使用 HList(非 shapeless)
+- 易于推理
+- 没有 22 限制
+- 编译缓慢
+- 大对象难以调试
+    </div>
+
+    <div id="page-19" class="step slide markdown" data-x="4200" data-y="4200" data-z="200" data-rotate-x="11" data-rotate-y="4" data-scale="1">
+- 3.使用 tuple(非 scala 原生 tuple)
+##
+
+    implicit def hlistDecoderImplicit2[A, B <: HList, H, I <: HList, M, N <: HList, RepCol, DataCol](
+        implicit head: Lazy[DecoderShape.Aux[A, H, M, RepCol, DataCol]]
+        , tail: Lazy[DecoderShape.Aux[B, I, N, RepCol, DataCol]]
+    ): DecoderShape.Aux[A :: B, H :: I, M :: N, RepCol, DataCol]
+
+##
+
+- HList 只能逐列推理
+##
+
+    implicit def caseClassHelper2DecoderGen[Rep1, Data1, Target1, Rep2, Data2, Target2, RepCol, DataCol](
+        implicit
+        shape1: DecoderShape.Aux[Rep1, Data1, Target1, RepCol, DataCol]
+        , shape2: DecoderShape.Aux[Rep2, Data2, Target2, RepCol, DataCol]
+    ): DecoderShape.Aux[CaseClassRepMapper2[Rep1, Data1, Rep2, Data2], CaseClassDataMapper2[Data1, Data2], CaseClassRepMapper2[Target1, Data1, Target2, Data2], RepCol, DataCol]
+
+- tuple 更容易同时获取多个 implicit
+    </div>
+
+    <div id="page-20" class="step slide markdown" data-x="4200" data-y="3400" data-z="14" data-rotate-x="-24" data-rotate-y="14" data-scale="1">
+- 1.避免与 scala.Tuple 产生冲突,采用自建 tuple
+- 2.自建 tuple 最大元素数量为 6
+- 3.在 Macro 方面采用嵌套 tuple 突破 22 限制
+- 4.采用 code gen 生成所有的辅助类和 implicit
+
+### 在 100 列的 slick table 中,编译时间由原生 api 的 24s 降低到 6s
+    </div>
+
+    <div id="page-21" class="step slide markdown" data-x="3000" data-y="3200" data-z="-26" data-rotate-x="14" data-rotate-y="14" data-scale="1">
+# 到目前为止,一切都很美好
+    </div>
+
+    <div id="page-22" class="step slide markdown" data-x="2000" data-y="3100" data-z="14" data-rotate-x="14" data-rotate-y="171" data-scale="1">
+- 我们不仅仅需要把属性对应起来
+- 我们需要省略无用的声明
+- 我们需要 LabelGeneric
+- 我们需要在任何时候都可以使用自动映射
+- 任何时候不能导致数量级的声明代码增长
+    </div>
+
     <div id="overview" class="step" data-x="3000" data-y="1500" data-z="0" data-scale="10">
     </div>
 
