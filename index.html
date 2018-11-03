@@ -294,7 +294,7 @@
 ##
 
 - 小技巧: 无须直接引入 ExecutionContext,作为参数在最后传入即可,减少 implicit not found 时的不确定因素
-- 开始讲解概念 DecoderShape
+- 开始简要介绍概念 DecoderShape
     </div>
 
     <div id="page-12" class="step slide markdown" data-x="1470" data-y="1900" data-z="-600" data-rotate-x="12" data-rotate-y="17" data-scale="1.6">
@@ -303,6 +303,7 @@
     trait DecoderShape[-E, RepCol, DataCol] extends CommonShape[E, RepCol] {
         override type Target
         type Data
+        override def packed: DecoderShape.Aux[Target, Data, Target, RepCol, DataCol]
         override def wrapRep(base: => E): Target
         override def buildRep(base: Target, oldRep: RepCol): RepCol
         def takeData(rep: Target, oldData: DataCol): SplitData[Data, DataCol]
@@ -321,6 +322,7 @@
     trait EncoderShape[-E, RepCol, DataCol] extends CommonShape[E, RepCol] {
         override type Target
         type Data
+        override def packed: EncoderShape.Aux[Target, Data, Target, RepCol, DataCol]
         override def wrapRep(base: => E): Target
         override def buildRep(base: Target, oldRep: RepCol): RepCol
         def buildData(data: Data, rep: Target, oldData: DataCol): DataCol
@@ -333,6 +335,22 @@
 - 重点:由特定类型到 Any 类型
     </div>
 
+    <div id="page-14" class="step slide markdown" data-x="-600" data-y="3000" data-z="200" data-rotate-x="62" data-rotate-y="33" data-scale="1.4">
+    trait FormatterShape[-E, RepCol, EncoderDataCol, DecoderDataCol]
+    extends EncoderShape[E, RepCol, EncoderDataCol] with DecoderShape[E, RepCol, DecoderDataCol]
+    with CommonShape[E, RepCol] {
+        override type Target
+        override type Data
+        override def packed: FormatterShape.Aux[Target, Data, Target, RepCol, EncoderDataCol, DecoderDataCol]
+        override def wrapRep(base: => E): Target
+        override def buildRep(base: Target, oldRep: RepCol): RepCol
+        override def takeData(rep: Target, oldData: DecoderDataCol): SplitData[Data, DecoderDataCol]
+        override def buildData(data: Data, rep: Target, oldData: EncoderDataCol): EncoderDataCol
+    }
+
+- EncoderShape, DecoderShape 兼而有之
+- DataCol 不统一, RepCol 统一
+    </div>
 
     <div id="overview" class="step" data-x="3000" data-y="1500" data-z="0" data-scale="10">
     </div>
