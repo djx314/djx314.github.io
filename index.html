@@ -644,6 +644,160 @@
 - 快完了快完了,最重要的概念放最后了
     </div>
 
+    <div id="page-38" class="step slide markdown" data-x="6700" data-y="-2600" data-z="7" data-rotate-x="-4" data-rotate-y="40" data-scale="1">
+## LazyModel 情景:
+
+    class FriendTable(tag: slick.lifted.Tag) extends Table[Friend](tag, "firend") with SlickResultIO {
+        def id   = column[Long]("id", O.AutoInc)
+        def name = column[String]("name")
+        def nick = column[String]("nick")
+        def age  = column[Int]("age")
+        ...
+    }
+    case class FriendWrap(
+        id: Long
+        , name: String
+        , nick: String
+        , age: Int
+        , photos: List[Photo])
+    def findPhotos(friendId: Long): List[Photo] = ???
+
+- 如何映射?
+    </div>
+
+    <div id="page-39" class="step slide markdown" data-x="8100" data-y="-2600" data-z="7" data-rotate-x="-2" data-rotate-y="20" data-scale="1">
+- 设计一:
+##
+
+    case class FriendPhotos(photos: List[Photo])
+    class FriendTable(tag: slick.lifted.Tag) extends Table[Friend](tag, "firend") with SlickResultIO {
+        val mapper: ReaderShapeValue[FriendPhotos => FriendWrap, RepCol, DataCol] = ???
+    }
+    val friendTq = TableQuery[FriendTable]
+    val result = friendTq.map(s => (s.id, s.mapper))
+
+##
+
+- id 需要被 select 2 次
+- 结论: Nope
+    </div>
+
+    <div id="page-40" class="step slide markdown" data-x="9300" data-y="-2600" data-z="7" data-rotate-x="-2" data-rotate-y="20" data-scale="1">
+    trait LazyModel[Input, Output, Sub] {
+        def apply(input: Input): Output
+        def sub: Sub
+    }
+
+    case class FriendPhotos(photos: List[Photo])
+    case class FriendId(id: Long)
+
+    trait LazyModel[FriendPhotos, FriendWrap, FriendId] {
+        def apply(input: FriendPhotos): FriendWrap
+        def sub: FriendId
+    }
+
+    class FriendTable(tag: slick.lifted.Tag) extends Table[Friend](tag, "firend") with SlickResultIO {
+        val mapper: ReaderShapeValue[LazyModel[FriendPhotos, FriendWrap, FriendId], RepCol, DataCol] = ???
+    }
+    val friendTq = TableQuery[FriendTable]
+    val result = friendTq.map(s => s.mapper)
+    </div>
+
+    <div id="page-41" class="step slide markdown" data-x="9300" data-y="-1600" data-z="7" data-rotate-x="0" data-rotate-y="20" data-scale="1">
+- id 列在完整结果被求值时已被求出,可以提前暴露
+- 避免不必要的列 select
+- 无须因为数据一致性限制而建立过多 model(尤其是大 model)
+- 重申: 避免出现数量级的属性声明增长
+- 有了这个特性才是上述 DTO 的完整版本
+    </div>
+
+    <div id="page-42" class="step slide markdown" data-x="9300" data-y="-800" data-z="7" data-rotate-x="0" data-rotate-y="0" data-scale="1">
+## UnusedModel
+- LazyModel: 提前一点,延后一点,只用于 DecoderShape
+- UnusedModel: 增加一点,减少一点,只用于 EncoderShape
+- UnusedModel[Input, Main, Unused]
+- Main: 主体 case class(slick 用于 update 的 model)
+- Input: Main 所不具备的列
+- Unused: Main 需要排除的列
+    </div>
+
+    <div id="page-43" class="step slide markdown" data-x="9300" data-y="0" data-z="7" data-rotate-x="0" data-rotate-y="0" data-scale="1">
+## 调试
+- 两个阶段需要调试:
+- 1. Macro 生成映射代码阶段
+- 2. 获取 implicit 阶段
+    </div>
+
+    <div id="page-44" class="step slide markdown" data-x="9700" data-y="1400" data-z="7" data-rotate-x="-2" data-rotate-y="20" data-rotate="14" data-scale="1.6">
+## 映射代码生成阶段
+- 更换调试方法
+- 不改变第一阶段逻辑,生成黑盒 Macro 代码
+- 临时文件打印 scalafmt 后的代码,以 html 显示
+- 打印代码可直接覆盖原 Macro 声明部分(Macro 失效可临时补救)
+- Macro 功能: 生成后的代码编译后报错优先于 Macro 内部报错
+- 大量抛 Exception 函数: 避免升级时带来的大量编译错误
+    </div>
+
+    <div id="page-45" class="step slide markdown" data-x="9300" data-y="2700" data-z="7" data-rotate-x="-2" data-rotate-y="20" data-scale="1.2">
+- [图2](./impress.css/pic-02.png)
+- [图3](./impress.css/pic-03.png)
+- [图4](./impress.css/pic-04.png)
+    </div>
+
+    <div id="page-46" class="step slide markdown" data-x="9900" data-y="3600" data-z="7" data-rotate-x="-2" data-rotate-y="20" data-scale="1">
+## implicit not found 定位
+- 更换调试方法
+- 按提示调试
+- 定位
+- 根据第一步打印的 Mapping info 定位问题列
+    </div>
+
+    <div id="page-47" class="step slide markdown" data-x="12000" data-y="4600" data-z="7" data-rotate-x="-2" data-rotate-y="20" data-scale="1">
+- [图5](./impress.css/pic-05.png)
+- [图6](./impress.css/pic-06.png)
+- [图7](./impress.css/pic-07.png)
+- [图8](./impress.css/pic-08.png)
+- [图9](./impress.css/pic-09.png)
+- [图10](./impress.css/pic-10.png)
+- [图11](./impress.css/pic-11.png)
+    </div>
+
+    <div id="page-48" class="step slide markdown" data-x="11400" data-y="3700" data-z="7" data-rotate-x="-2" data-rotate-y="20" data-scale="1">
+## 基本抽象结构
+- CommonShape: 只有列遍历
+- EncoderShape: 列与 model 映射, 继承 CommonShape, 特定类型 => Any, UnusedModel
+- DecoderShape: 列与 model 映射, 继承 CommonShape, Any => 特定类型, LazyModel
+- FormatterShape: 列与 model 映射, 继承 EncoderShape, DecoderShape, Any => 特定类型, 特定类型 => Any
+    </div>
+
+    <div id="page-49" class="step slide markdown" data-x="1100" data-y="7000" data-z="7" data-rotate-x="14" data-rotate-y="71" data-scale="1">
+## 代码美感
+- 展开讲述
+    </div>
+
+    <div id="page-50" class="step slide markdown" data-x="1100" data-y="6000" data-z="7" data-rotate-x="7" data-rotate-y="60" data-scale="1">
+## 现有成果及未来展望
+- 1.slick input, output
+- 2.slick sort by
+- 3.slick input, output with circe(使用 encoder 生成 decoder)
+- 4.slick with sangria
+- 5.akka-http, play 参数传入
+- (1)多源头参数传入: json, form, url parameters
+- (2)默认传入源头(PlaceHolder)
+- (3)验证(支持 future, 前端提示友好, 多源头数据无需先 decode 再验证, 多列组合验证, 改善 akka-http 多层回调结构)
+    </div>
+
+    <div id="page-51" class="step slide markdown" data-x="1700" data-y="4900" data-z="7" data-rotate-x="-2" data-rotate-y="20" data-scale="1">
+## 问题
+- 1.循环类型声明未有成熟方案
+- 2.default value 未有适配方案
+- 3.Macro 映射规则未 stable
+    </div>
+
+    <div id="page-52" class="step slide markdown" data-x="9300" data-y="-2600" data-z="7" data-rotate-x="-2" data-rotate-y="20" data-scale="1">
+![谢谢](./impress.css/pic-12.jpg)
+    </div>
+
     <div id="overview" class="step" data-x="3000" data-y="1500" data-z="0" data-scale="16">
     </div>
 

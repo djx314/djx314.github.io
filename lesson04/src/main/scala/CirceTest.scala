@@ -32,4 +32,11 @@ object CirceTest extends App with CirceHelper {
   println(json5.noSpaces)
   println(json5 == json3)
 
+  object Foo3 {
+    val id = ""
+  }
+
+  val json6 = circe.effect(circe.debugSingleModel[CompareBar](Foo3)).toJson(bar2)
+  circe.singleModel[CompareBar](Foo3).debugCompile.i3(circe)
+
 }
