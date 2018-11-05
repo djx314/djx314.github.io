@@ -36,7 +36,7 @@ object CirceTest extends App with CirceHelper {
     val id = ""
   }
 
-  val json6 = circe.effect(circe.debugSingleModel[CompareBar](Foo3)).toJson(bar2)
+  def json6 = circe.effect(circe.debugSingleModel[CompareBar](Foo3)).toJson(bar2)
   circe.singleModel[CompareBar](Foo3).debugCompile.i2(circe)
 
 }

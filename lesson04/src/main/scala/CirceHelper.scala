@@ -1,9 +1,7 @@
 import io.circe.{Encoder, Json, JsonObject}
 import net.scalax.asuna.core.common.Placeholder
-import net.scalax.asuna.core.decoder.{DecoderShape, SplitData}
 import net.scalax.asuna.core.encoder.EncoderShape
-import net.scalax.asuna.mapper.common.RepColumnContent
-import net.scalax.asuna.mapper.decoder.{DecoderContent, DecoderWrapperHelper}
+import net.scalax.asuna.mapper.common.SingleRepContent
 import net.scalax.asuna.mapper.encoder.{EncoderContent, EncoderWrapperHelper}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -52,25 +50,25 @@ trait CirceHelper {
   }
 
   implicit def feImplicit1[T](implicit encoder: Encoder[T])
-    : EncoderShape.Aux[RepColumnContent[Placeholder[T], T], T, EncoderWrapperImpl[T], List[EncoderWrapper], List[(String, Json)]] = {
-    new EncoderShape[RepColumnContent[Placeholder[T], T], List[EncoderWrapper], List[(String, Json)]] {
+    : EncoderShape.Aux[SingleRepContent[Placeholder[T], T], T, EncoderWrapperImpl[T], List[EncoderWrapper], List[(String, Json)]] = {
+    new EncoderShape[SingleRepContent[Placeholder[T], T], List[EncoderWrapper], List[(String, Json)]] {
       override type Data   = T
       override type Target = EncoderWrapperImpl[T]
-      override def wrapRep(base: => RepColumnContent[Placeholder[T], T]): EncoderWrapperImpl[T] =
-        EncoderWrapper(base.columnInfo.tableColumnSymbol.name, encoder)
+      override def wrapRep(base: => SingleRepContent[Placeholder[T], T]): EncoderWrapperImpl[T] =
+        EncoderWrapper(base.columnInfo.singleModelSymbol.name, encoder)
       override def buildRep(base: EncoderWrapperImpl[T], oldRep: List[EncoderWrapper]): List[EncoderWrapper] = base :: oldRep
       override def buildData(data: T, rep: EncoderWrapperImpl[T], oldData: List[(String, Json)]): List[(String, Json)] =
         ((rep.key, rep.encoder(data))) :: oldData
     }
   }
 
-  implicit def feImplicit2[T]: EncoderShape.Aux[RepColumnContent[Encoder[T], T], T, EncoderWrapperImpl[T], List[EncoderWrapper], List[(String, Json)]] = {
-    new EncoderShape[RepColumnContent[Encoder[T], T], List[EncoderWrapper], List[(String, Json)]] {
+  implicit def feImplicit2[T]: EncoderShape.Aux[SingleRepContent[Encoder[T], T], T, EncoderWrapperImpl[T], List[EncoderWrapper], List[(String, Json)]] = {
+    new EncoderShape[SingleRepContent[Encoder[T], T], List[EncoderWrapper], List[(String, Json)]] {
       override type Data   = T
       override type Target = EncoderWrapperImpl[T]
-      override def wrapRep(base: => RepColumnContent[Encoder[T], T]): EncoderWrapperImpl[T] = {
+      override def wrapRep(base: => SingleRepContent[Encoder[T], T]): EncoderWrapperImpl[T] = {
         val rep = base
-        EncoderWrapper(rep.columnInfo.tableColumnSymbol.name, rep.rep)
+        EncoderWrapper(rep.columnInfo.singleModelSymbol.name, rep.rep)
       }
       override def buildRep(base: EncoderWrapperImpl[T], oldRep: List[EncoderWrapper]): List[EncoderWrapper] = base :: oldRep
       override def buildData(data: T, rep: EncoderWrapperImpl[T], oldData: List[(String, Json)]): List[(String, Json)] =
