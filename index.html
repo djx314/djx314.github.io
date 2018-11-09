@@ -791,9 +791,9 @@ RootModel, 存储了一个属性名称的 List, 但一般不会使用在实际�
 
     <div id="page-51" class="step slide markdown" data-x="1700" data-y="4900" data-z="7" data-rotate-x="-2" data-rotate-y="20" data-scale="1">
 ## 问题
-- 1.循环类型声明要么 object lazy implicit 一把梭, 要么用比较原始的 api 自己写深层嵌套, 未有自动化较高的方法
-- 2.不支持抽象代数类型
-- 3.default value 未有适配方案
+- 1.循环类型声明要么 object lazy implicit 一把梭, 要么用比较原始的 api 自己写深层嵌套, 未有自动化较高的方法(更新: 目前可以使用类似 play-json 的声明方式或者 asuna 特定的声明方式两种方法解决)
+- 2.不支持抽象代数类型(打算直接使用 shapeless 的 API)
+- 3.default value 未有适配方案(更新: 已支持)
 - 4.Macro 映射规则未 stable
     </div>
 
